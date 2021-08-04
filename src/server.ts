@@ -26,7 +26,8 @@ app.use(express.json());
 
 //When this route is called, return the most recent 100 signatures in the db
 app.get("/signatures", async (req, res) => {
-  const signatures = null; //FIXME-TASK: get signatures from db!
+  const dbResult = await client.query("SELECT id, signature, message FROM signatures ORDER BY id");
+  const signatures = dbResult.rows
   res.status(200).json({
     status: "success",
     data: {
@@ -39,9 +40,10 @@ app.get("/signatures/:id", async (req, res) => {
   // :id indicates a "route parameter", available as req.params.id
   //  see documentation: https://expressjs.com/en/guide/routing.html
   const id = parseInt(req.params.id); // params are always string type
-
-  const signature = null;   //FIXME-TASK get the signature row from the db (match on id)
-
+  const text = "SELECT * FROM signatures WHERE id = $1";
+  const values = [`${id}`]
+  const dbResult = await client.query(text, values);   
+  const signature = dbResult.rows
   if (signature) {
     res.status(200).json({
       status: "success",
@@ -61,9 +63,12 @@ app.get("/signatures/:id", async (req, res) => {
 
 app.post("/signatures", async (req, res) => {
   const { name, message } = req.body;
-  if (typeof name === "string") {
-    const createdSignature = null; //FIXME-TASK: insert the supplied signature object into the DB
+  const text = "INSERT INTO signatures(signature, message) VALUES ($1, $2)"
+  const values = [name, message]
+  if (typeof name === "string" && typeof message === "string") {
 
+    const createdSignature = await client.query(text, values); 
+    
     res.status(201).json({
       status: "success",
       data: {
@@ -85,9 +90,11 @@ app.put("/signatures/:id", async (req, res) => {
   //  :id refers to a route parameter, which will be made available in req.params.id
   const { name, message } = req.body;
   const id = parseInt(req.params.id);
+  const values = [name, id]
+  const text = "UPDATE signatures SET signature = $1 WHERE id = $2"
   if (typeof name === "string") {
 
-    const result: any = null; //FIXME-TASK: update the signature with given id in the DB.
+    const result: any = await client.query(text, values); //FIXME-TASK: update the signature with given id in the DB.
 
     if (result.rowCount === 1) {
       const updatedSignature = result.rows[0];
@@ -118,8 +125,9 @@ app.put("/signatures/:id", async (req, res) => {
 
 app.delete("/signatures/:id", async (req, res) => {
   const id = parseInt(req.params.id); // params are string type
-
-  const queryResult: any = null; ////FIXME-TASK: delete the row with given id from the db  
+  const text = "DELETE FROM signatures WHERE id = $1"
+  const values = [`${id}`];
+  const queryResult: any = await client.query(text, values); ////FIXME-TASK: delete the row with given id from the db  
   const didRemove = queryResult.rowCount === 1;
 
   if (didRemove) {
